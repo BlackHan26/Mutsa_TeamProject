@@ -25,14 +25,10 @@ public class TodoApiController {
 
     @PostMapping
     public ResponseDto create(
-            @RequestParam("title") String title,
-            @RequestParam("content") String content,
-            @RequestParam("startDate") LocalDate startDate,
-            @RequestParam("dueDate") LocalDate dueDate,
+            @RequestBody TodoApiDto todoApiDto,
             @Nullable @RequestParam(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) throws IOException {
         Long userId = Long.parseLong(authentication.getName());
-        TodoApiDto todoApiDto = new TodoApiDto().fromParams(title, content, startDate, dueDate);
         return service.createTodo(userId,todoApiDto, files);
     }
 
@@ -55,14 +51,10 @@ public class TodoApiController {
     @PutMapping("/{todoId}")
     public ResponseDto update(
             @PathVariable("todoId") Long todoId,
-            @RequestParam("title") String title,
-            @RequestParam("content") String content,
-            @RequestParam("startDate") LocalDate startDate,
-            @RequestParam("dueDate") LocalDate dueDate,
+            @RequestBody TodoApiDto todoApiDto,
             @Nullable @RequestParam(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) throws IOException {
         Long userId = Long.parseLong(authentication.getName());
-        TodoApiDto todoApiDto = new TodoApiDto().fromParams(title, content, startDate, dueDate);
         return service.updateTodo(userId, todoId, todoApiDto, files);
     }
 
