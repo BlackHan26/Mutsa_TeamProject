@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,7 +39,14 @@ public class TaskApiService {
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
     private final TaskValidationUtils taskValidationUtils;
-
+    /**
+     * 새로운 업무를 등록합니다.
+     *
+     * @param userId         업무를 등록하는 사용자의 식별자
+     * @param teamId         업무가 속한 팀의 식별자
+     * @param taskCreateDto  업무 등록을 위한 DTO (Data Transfer Object)
+     * @return 등록된 업무에 대한 응답 DTO
+     */
     //업무 등록하는 메서드
     public ResponseDto createTask(Long userId, Long teamId, TaskCreateDto taskCreateDto) {
         log.info("TaskApiService createTask1");
@@ -65,7 +73,15 @@ public class TaskApiService {
         return new ResponseDto("업무가 등록되었습니다.");
     }
 
-    //새로운 업무 엔터티를 생성하여 반환하는 메서드
+    /**
+     * 새로운 업무 엔터티를 생성하여 반환합니다.
+     *
+     * @param userId         업무를 등록하는 사용자의 식별자
+     * @param teamEntity     업무가 속한 팀 엔터티
+     * @param taskCreateDto  업무 등록을 위한 DTO (Data Transfer Object)
+     * @param workerMember   담당자의 멤버 엔터티
+     * @return 생성된 업무 엔터티
+     */
     private TaskApiEntity createTaskEntity(Long userId, TeamEntity teamEntity, TaskCreateDto taskCreateDto, MemberEntity workerMember) {
         TaskApiEntity taskApiEntity = new TaskApiEntity();
         taskApiEntity.setUserId(userId);
@@ -135,6 +151,8 @@ public class TaskApiService {
     }
 
     //업무 수정 메서드
+    @Transactional
+
     public ResponseDto updateTask(Long userId, Long teamId, Long taskId, TaskApiDto taskApiDto) {
         //팀 존재 확인
         TeamEntity teamEntity = taskValidationUtils.getTeamById(teamId);

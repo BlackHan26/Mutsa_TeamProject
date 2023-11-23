@@ -8,6 +8,8 @@ import com.example.todo.service.todo.TodoApiService;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -44,7 +46,9 @@ public class TodoApiController {
             @PathVariable("userId") Long userId,
             @RequestParam(value = "page", defaultValue = "0") Integer page,
             @RequestParam(value = "limit", defaultValue = "5") Integer limit) {
-        return service.readUserTodoAll(userId, page, limit);
+        service.findUserById(userId);
+        Pageable pageable = PageRequest.of(page, limit);
+        return service.readUserTodoAll(userId, pageable);
     }
 
     //Todo 수정
