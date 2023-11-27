@@ -33,32 +33,34 @@ public class TaskCommentService {
     private final TaskCommentReplyRepository taskCommentReplyRepository;
 
     public void createTaskComment(Long userId, Long teamId, Long taskId, TaskCommentCreateDto taskCommentCreateDto) {
-        // 사용자 존재 여부 확인
+        // 사용자, 팀, 업무, 댓글 존재 여부 확인
         User user = taskValidationUtils.getUserById(userId);
-        // 팀 존재 여부 확인
         TeamEntity team = taskValidationUtils.getTeamById(teamId);
-        // 업무 존재 여부 확인
         TaskApiEntity taskApiEntity = taskValidationUtils.getTaskById(taskId);
-        // 사용자가 팀의 멤버인지 확인
         taskValidationUtils.isMemberOfTeam(userId, teamId);
-
+        //Entity를 생성하고 저장한다
+        saveTaskComment(user, taskApiEntity, taskCommentCreateDto.getContent());
+        //업무관리자에게 댓글이 달렸다는 알림을 보냄
+        notifyComment(user, team, taskApiEntity);
+    }
+    private TaskCommentEntity saveTaskComment(User user, TaskApiEntity taskApiEntity, String content) {
         TaskCommentEntity taskCommentEntity = new TaskCommentEntity();
         taskCommentEntity.setWriter(user);
-        taskCommentEntity.setContent(taskCommentCreateDto.getContent());
+        taskCommentEntity.setContent(content);
         taskCommentEntity.setTaskApiEntity(taskApiEntity);
-        taskCommentRepository.save(taskCommentEntity);
-
+        return taskCommentRepository.save(taskCommentEntity);
+    }
+    private void notifyComment(User user, TeamEntity team, TaskApiEntity taskApiEntity) {
         // 댓글을 작성한 사용자와 업무 관리자를 비교
         if (!user.getId().equals(taskApiEntity.getWorkerId())) {
-            LocalDateTime currentTime = LocalDateTime.now(); // 현재 시간
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            String formattedTime = currentTime.format(formatter);
-
+            String formattedTime = formatCurrentTime();
             // 알림 메시지 생성
-            String message = "'" + team.getName() + "'팀의 " + user.getUsername() + "님이'" + taskApiEntity.getTaskName() + "'에 메시지를 남겼습니다. createdTime:" + formattedTime;            // 관리자에게 알림을 보냄
+            String message = notificationMessage(team, user, taskApiEntity, formattedTime);
+            // 관리자에게 알림을 보냄
             notificationService.notify(taskApiEntity.getWorkerId(), message);
         } else throw new TodoAppException(ErrorCode.NOT_ALLOWED_MESSAGE);
     }
+
 
     public Page<TaskCommentReadDto> readTaskCommentsPage(Long userId, Long teamId, Long taskId, Integer page, Integer limit) {
         Optional<User> optionalUser = userRepository.findById(userId);
@@ -132,7 +134,7 @@ public class TaskCommentService {
         return replyEntity;
     }
     private void sendNotifications(Long userId, TaskApiEntity taskApiEntity, TeamEntity team, User user, String formattedTime, Long receiveUserId, boolean isWorker) {
-        String message = NotificationMessage(team, user, taskApiEntity, formattedTime);
+        String message = notificationMessage(team, user, taskApiEntity, formattedTime);
         // 답글을 작성한 사용자와 댓글 작성자가 다를 때 알림을 보냄
         if (!userId.equals(receiveUserId)) {
             // 댓글 작성자에게 알림 보내기
@@ -145,7 +147,7 @@ public class TaskCommentService {
             notificationService.notify(taskApiEntity.getWorkerId(), message);
         }
     }
-    private String NotificationMessage(TeamEntity team, User user, TaskApiEntity taskApiEntity, String formattedTime) {
+    private String notificationMessage(TeamEntity team, User user, TaskApiEntity taskApiEntity, String formattedTime) {
         return "'" + team.getName() + "'팀의 " + user.getUsername() + "님이 '" + taskApiEntity.getTaskName() + "'에 메시지를 남겼습니다. createdTime:" + formattedTime;
     }
     private String formatCurrentTime() {

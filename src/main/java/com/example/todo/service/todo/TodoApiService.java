@@ -70,11 +70,11 @@ public class TodoApiService {
 
         // 현재 날짜를 기준으로 Status 설정
         LocalDate currentDate = LocalDate.now();
-        todoApiEntity.setStatus(calculateTodoStatus(todoApiDto.getStartDate(), todoApiDto.getDueDate(), currentDate));
+        todoApiEntity.setStatus(setTodoStatus(todoApiDto.getStartDate(), todoApiDto.getDueDate(), currentDate));
 
         return todoApiRepository.save(todoApiEntity);
     }
-    private String calculateTodoStatus(LocalDate startDate, LocalDate dueDate, LocalDate currentDate) {
+    private String setTodoStatus(LocalDate startDate, LocalDate dueDate, LocalDate currentDate) {
         if (startDate.isAfter(currentDate)) {
             return "진행예정";
         } else if (dueDate.isBefore(currentDate)) {
@@ -147,7 +147,7 @@ public class TodoApiService {
         // 현재 날짜 추가
         LocalDate currentDate = LocalDate.now();
 
-        todoApiEntity.setStatus(calculateTodoStatus(todoApiDto.getStartDate(), todoApiDto.getDueDate(), currentDate));
+        todoApiEntity.setStatus(setTodoStatus(todoApiDto.getStartDate(), todoApiDto.getDueDate(), currentDate));
 
         todoApiRepository.save(todoApiEntity);
 
