@@ -151,8 +151,6 @@ public class TaskApiService {
     }
 
     //업무 수정 메서드
-    @Transactional
-
     public ResponseDto updateTask(Long userId, Long teamId, Long taskId, TaskApiDto taskApiDto) {
         //팀 존재 확인
         TeamEntity teamEntity = taskValidationUtils.getTeamById(teamId);

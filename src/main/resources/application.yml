@@ -2,13 +2,14 @@ spring:
   profiles:
     include: oauth
   datasource:
-    url: jdbc:mysql://${RDS_URL}/todo
+    url: jdbc:mysql://database-1.c5wcjciz6aut.ap-northeast-2.rds.amazonaws.com:3306/articles?serverTimezone=UTC&characterEncoding=UTF-8
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: admin
-    password: angksehwjs031
+    password: database
 
   mail:
-    host: smtp.gmail.com
+    host: smtp.gmail.
+
     port: 587
     username: ${MAIL_ID}
     password: ${MAIL_PWD}

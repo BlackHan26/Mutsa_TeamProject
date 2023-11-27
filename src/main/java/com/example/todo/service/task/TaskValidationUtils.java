@@ -1,18 +1,16 @@
 package com.example.todo.service.task;
 
-import com.example.todo.domain.entity.TaskApiEntity;
-import com.example.todo.domain.entity.TeamEntity;
-import com.example.todo.domain.entity.UsersSubscriptionEntity;
+import com.example.todo.domain.entity.*;
 import com.example.todo.domain.entity.enums.SubscriptionStatus;
 import com.example.todo.domain.entity.user.User;
-import com.example.todo.domain.repository.TaskApiRepository;
-import com.example.todo.domain.repository.TeamReposiotry;
-import com.example.todo.domain.repository.UsersSubscriptionRepository;
+import com.example.todo.domain.repository.*;
 import com.example.todo.domain.repository.user.UserRepository;
 import com.example.todo.exception.ErrorCode;
 import com.example.todo.exception.TodoAppException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 import static com.example.todo.service.team.TeamService.FREE_TEAM_PARTICIPANT_NUM;
 @Component
@@ -22,7 +20,7 @@ public class TaskValidationUtils {
     private final TeamReposiotry teamRepository;
     private final UserRepository userRepository;
     private final UsersSubscriptionRepository usersSubscriptionRepository;
-
+    private final TaskCommentRepository taskCommentRepository;
     //회원인지 확인
     public User getUserById(Long userId) {
         return userRepository.findById(userId)
@@ -39,6 +37,11 @@ public class TaskValidationUtils {
     public TaskApiEntity getTaskById(Long taskId) {
         return taskApiRepository.findById(taskId)
                 .orElseThrow(() -> new TodoAppException(ErrorCode.NOT_FOUND_TASK));
+    }
+
+    public TaskCommentEntity getTaskCommentById(Long commentId) {
+        return taskCommentRepository.findById(commentId)
+                .orElseThrow(() -> new TodoAppException(ErrorCode.NOT_FOUND_COMMENT));
     }
 
     //멤버인지 확인하는 메서드

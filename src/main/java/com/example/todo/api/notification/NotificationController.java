@@ -5,6 +5,7 @@ import com.example.todo.service.notification.NotificationService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -64,4 +65,17 @@ public class NotificationController {
     public void sendData(@PathVariable Long userId) {
         notificationService.notify(userId, "data");
     }
+
+    @GetMapping("/api/notifications/subscribe/{taskId}")
+    public String showNotification(@PathVariable Long taskId, Model model) {
+        // 업무 수정 메시지 생성 또는 데이터베이스에서 가져오기
+        String message = "업무가 수정되었습니다";
+
+        // 모델에 메시지 추가
+        model.addAttribute("message", message);
+
+        // 알림창 템플릿으로 이동
+        return "notification";
+    }
 }
+

@@ -34,6 +34,8 @@ public enum ErrorCode {
     NOT_FOUND_TEAM(NOT_FOUND, "해당팀이 존재하지 않습니다."),
     NOT_FOUND_TODO(NOT_FOUND, "해당TODO가 존재하지 않습니다."),
     NOT_FOUND_USER(NOT_FOUND, "해당USER가 존재하지 않습니다."),
+    NOT_FOUND_COMMENT(NOT_FOUND, "해당Comment가 존재하지 않습니다."),
+
     NOT_FOUND_TASK(NOT_FOUND, "해당업무가 존재하지 않습니다."),
     NOT_FOUND_MEMBER(NOT_FOUND, "해당 팀에 가입된 상태가 아닙니다."),
 

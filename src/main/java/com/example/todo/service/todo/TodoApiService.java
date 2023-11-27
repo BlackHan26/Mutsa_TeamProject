@@ -74,6 +74,15 @@ public class TodoApiService {
 
         return todoApiRepository.save(todoApiEntity);
     }
+    private String calculateTodoStatus(LocalDate startDate, LocalDate dueDate, LocalDate currentDate) {
+        if (startDate.isAfter(currentDate)) {
+            return "진행예정";
+        } else if (dueDate.isBefore(currentDate)) {
+            return "완료";
+        } else {
+            return "진행중";
+        }
+    }
     // by 최강성 : 파일 첨부 기능 추가
     private void saveFiles(Long userId, Long todoId, List<MultipartFile> files) throws IOException {
         if (files != null) {
@@ -93,16 +102,8 @@ public class TodoApiService {
             }
         }
     }
-    // 현재날짜를 기준으로 Status 설정하는 메서드
-    private String calculateTodoStatus(LocalDate startDate, LocalDate dueDate, LocalDate currentDate) {
-        if (startDate.isAfter(currentDate)) {
-            return "진행예정";
-        } else if (dueDate.isBefore(currentDate)) {
-            return "완료";
-        } else {
-            return "진행중";
-        }
-    }
+
+
 
     // To do 상세 조회
     public TodoApiDto readTodo(Long todoId) {
@@ -191,11 +192,11 @@ public class TodoApiService {
         todoApiRepository.deleteById(todoApiEntity.getId());
         return new ResponseDto("Todo가 삭제되었습니다.");
     }
-
-    // 파일 업데이트 및 추가
+    //To do 좋아요
     public boolean likeTodo(Long userId, Long todoId) {
         // 유저 확인
-        User user = userRepository.findById(userId).orElseThrow(() -> new TodoAppException(ErrorCode.NOT_FOUND_USER));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new TodoAppException(ErrorCode.NOT_FOUND_USER));
         // To do 확인
         TodoApiEntity todoApiEntity = findTodoById(todoId);
         Optional<LikeEntity> optionalLikeEntity = likeRepository.findByUserIdAndTodoId(userId, todoId);

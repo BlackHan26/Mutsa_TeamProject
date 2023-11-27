@@ -29,22 +29,18 @@ public class TaskCommentService {
     private final TeamReposiotry teamReposiotry;
     private final TaskApiRepository taskApiRepository;
     private final NotificationService notificationService;
+    private final TaskValidationUtils taskValidationUtils;
     private final TaskCommentReplyRepository taskCommentReplyRepository;
+
     public void createTaskComment(Long userId, Long teamId, Long taskId, TaskCommentCreateDto taskCommentCreateDto) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 유저 존재 X");
-        User user = optionalUser.get();
-
-        Optional<TeamEntity> optionalTeamEntity = teamReposiotry.findById(teamId);
-        if (optionalTeamEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 팀 존재 X");
-        TeamEntity team = optionalTeamEntity.get();
-
-        Optional<TaskApiEntity> optionalTaskApiEntity = taskApiRepository.findById(taskId);
-        if (optionalTaskApiEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 task 존재 X");
-        TaskApiEntity taskApiEntity = optionalTaskApiEntity.get();
-
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findByTeamAndUser(team, user);
-        if (optionalMemberEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 팀에 가입X");
+        // 사용자 존재 여부 확인
+        User user = taskValidationUtils.getUserById(userId);
+        // 팀 존재 여부 확인
+        TeamEntity team = taskValidationUtils.getTeamById(teamId);
+        // 업무 존재 여부 확인
+        TaskApiEntity taskApiEntity = taskValidationUtils.getTaskById(taskId);
+        // 사용자가 팀의 멤버인지 확인
+        taskValidationUtils.isMemberOfTeam(userId, teamId);
 
         TaskCommentEntity taskCommentEntity = new TaskCommentEntity();
         taskCommentEntity.setWriter(user);
@@ -100,63 +96,61 @@ public class TaskCommentService {
         if (optionalMemberEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 팀에 가입X");
 
         Optional<TaskCommentEntity> optionalTaskCommentEntity = taskCommentRepository.findById(commentId);
-        if (optionalTaskCommentEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 TaskComment가 존재X");
+        if (optionalTaskCommentEntity.isEmpty())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 TaskComment가 존재X");
         TaskCommentEntity taskCommentEntity = optionalTaskCommentEntity.get();
 
         taskCommentEntity.setContent(taskCommentUpdateDto.getContent());
         taskCommentRepository.save(taskCommentEntity);
     }
+
     //답글 달기
     public TaskCommentReplyEntity addReply(Long userId, Long teamId, Long taskId, Long commentId, TaskCommentReplyDto taskCommentReplyDto) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 유저 존재 X");
-        User user = optionalUser.get();
+        // 사용자, 팀, 업무, 댓글 존재 여부 확인
+        User user = taskValidationUtils.getUserById(userId);
+        TeamEntity team = taskValidationUtils.getTeamById(teamId);
+        TaskApiEntity taskApiEntity = taskValidationUtils.getTaskById(taskId);
+        TaskCommentEntity taskCommentEntity = taskValidationUtils.getTaskCommentById(commentId);
+        taskValidationUtils.isMemberOfTeam(userId, teamId);
 
-        Optional<TeamEntity> optionalTeamEntity = teamReposiotry.findById(teamId);
-        if (optionalTeamEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 팀 존재 X");
-        TeamEntity team = optionalTeamEntity.get();
+        //맞다면 진행
+        TaskCommentReplyEntity replyEntity = createReplyEntity(taskCommentEntity, user, taskCommentReplyDto);
 
-        Optional<TaskApiEntity> optionalTaskApiEntity = taskApiRepository.findById(taskId);
-        if (optionalTaskApiEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 task 존재 X");
-        TaskApiEntity taskApiEntity = optionalTaskApiEntity.get();
+        // 알림을 받을 사용자의 ID를 가져오기 위해 TaskCommentEntity를 사용하여 작성자의 ID를 가져옴
+        Long receiveUserId = taskCommentEntity.getWriter().getId();
+        boolean isWorker = userId.equals(taskApiEntity.getWorkerId());
+        //알림 보내기
+        sendNotifications(userId, taskApiEntity, team, user, formatCurrentTime(), receiveUserId, isWorker);
 
-        Optional<TaskCommentEntity> optionalTaskCommentEntity = taskCommentRepository.findById(commentId);
-        if (optionalTaskCommentEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 TaskComment가 존재X");
-        TaskCommentEntity taskCommentEntity = optionalTaskCommentEntity.get();
-
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findByTeamAndUser(team, user);
-        if (optionalMemberEntity.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 팀에 가입X");
-
-        //맞다면 진행한다.
+        return taskCommentReplyRepository.save(replyEntity);
+    }
+    private TaskCommentReplyEntity createReplyEntity(TaskCommentEntity taskCommentEntity, User user, TaskCommentReplyDto taskCommentReplyDto) {
         TaskCommentReplyEntity replyEntity = new TaskCommentReplyEntity();
         replyEntity.setTaskCommentEntity(taskCommentEntity);
         replyEntity.setWriter(user);
         replyEntity.setReply(taskCommentReplyDto.getReply());
-        LocalDateTime currentTime = LocalDateTime.now(); // 현재 시간
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        String formattedTime = currentTime.format(formatter);
-
-        // 알림을 받을 사용자의 ID를 가져오기 위해 TaskCommentEntity를 사용하여 작성자의 ID를 가져옴
-        Long receiveUserId = taskCommentEntity.getWriter().getId();
-        boolean isWoker = userId.equals(taskApiEntity.getWorkerId());
-
+        return replyEntity;
+    }
+    private void sendNotifications(Long userId, TaskApiEntity taskApiEntity, TeamEntity team, User user, String formattedTime, Long receiveUserId, boolean isWorker) {
+        String message = NotificationMessage(team, user, taskApiEntity, formattedTime);
         // 답글을 작성한 사용자와 댓글 작성자가 다를 때 알림을 보냄
         if (!userId.equals(receiveUserId)) {
-            // 알림 메시지 생성
-            String message = "'" + team.getName() + "'팀의 " + user.getUsername() + "님이'" + taskApiEntity.getTaskName() + "'에 메시지를 남겼습니다. createdTime:" + formattedTime;
             // 댓글 작성자에게 알림 보내기
             notificationService.notify(receiveUserId, message);
-            if (!isWoker) { //업무담당자도 아닌, 제3자라면
+            if (!isWorker) {//업무담당자도 아닌, 제3자라면
                 // 업무 담당자에게도 알림 보내기
                 notificationService.notify(taskApiEntity.getWorkerId(), message);
             }
-        } else {
-            // 댓쓴이가 답글을 달았다면, 담당자에게 알림 보내기
-            // 알림 메시지 생성
-            String message = "'" + team.getName() + "'팀의 " + user.getUsername() + "님이'" + taskApiEntity.getTaskName() + "'에 메시지를 남겼습니다. createdTime:"+ formattedTime;
-            // 업무 담당자에게 알림 보내기
+        } else {// 댓쓴이가 답글을 달았다면, 담당자에게 알림 보내기
             notificationService.notify(taskApiEntity.getWorkerId(), message);
         }
-        return taskCommentReplyRepository.save(replyEntity);
+    }
+    private String NotificationMessage(TeamEntity team, User user, TaskApiEntity taskApiEntity, String formattedTime) {
+        return "'" + team.getName() + "'팀의 " + user.getUsername() + "님이 '" + taskApiEntity.getTaskName() + "'에 메시지를 남겼습니다. createdTime:" + formattedTime;
+    }
+    private String formatCurrentTime() {
+        LocalDateTime currentTime = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        return currentTime.format(formatter);
     }
 }
